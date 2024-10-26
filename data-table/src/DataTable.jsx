@@ -1,11 +1,31 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 
 const DataTable = () => {
 
     const [formData, setFormData ] = useState({ name: "", gender: "", age: "" });
+    const [data, setData ] = useState([]);
+    const [ editId, setEditId ] = useState(false);
+    const outdideCkick = useRef(false);
+    useEffect(()=> {
+        if(!editId) return;
+        let selectedItem = document.querySelectorAll(`[id="${editId}"]`)
+        selectedItem[0].focus();
+    }, [editId]);
 
-    const [data, setData ] = useState([])
+    useEffect(()=> {
+        const handleClickOutside = (event) => {
+            if(outdideCkick.current && !outdideCkick.current.contains(event.target)) {
+                setEditId(false);
+            }
+        }
+        document.addEventListener("click", handleClickOutside)
+        return () => {
+            document.removeEventListener("click", handleClickOutside);
+        }
+    },[])
+
+
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value})
@@ -17,11 +37,23 @@ const DataTable = () => {
                 name: formData.name,
                 gender: formData.gender,
                 age: formData.age
-
             };
             setData([...data, newItem]);
             setFormData({ name: "", gender: "", age: "" });
         }
+    }
+
+    const handleDelete = (id) => {
+        const updatedList = data.filter((item)=> item.id !== id )
+        setData(updatedList);
+    }
+
+    const handleEdit = (id, updatedData) => {
+        if(!editId || editId !== id) {
+            return
+        }
+        const updatedList = data.map((item) => item.id === id ? {...item, ...updatedData} : item);
+        setData(updatedList);
     }
 
   return (
@@ -40,7 +72,7 @@ const DataTable = () => {
       <div className="search-table-container">
         <input type="text" placeholder="Search by name" value={""} onChange={() => {}} className="search-input"/>
 
-        <table>
+        <table ref={outdideCkick}>
             <thead>
                 <tr>
                     <th>Name</th>
@@ -50,15 +82,24 @@ const DataTable = () => {
                 </tr>
             </thead>
             <tbody>
-                {/* <tr>
-                    <td>John Doe</td>
-                    <td>Male</td>
-                    <td>23</td>
-                    <td>
-                        <button className="edit">Edit</button>
-                        <button className="delete">Delete</button>
-                    </td>
-                </tr> */}
+               {data.length > 0 ? (
+                data.map((item) => (
+                    <tr key={item.id}>
+                        <td id={item.id} contentEditable={editId === item.id} onBlur={(e)=> handleEdit(item.id, {name: e.target.innerText})}>{item.name}</td>
+                        <td id={item.id} contentEditable={editId === item.id} onBlur={(e)=> handleEdit(item.id, {gender: e.target.innerText})}>{item.gender}</td>
+                        <td id={item.id} contentEditable={editId === item.id} onBlur={(e)=> handleEdit(item.id, {age: e.target.innerText})}>{item.age}</td>
+                        <td className="actions">
+                            <button className="edit" onClick={()=> setEditId(item.id)}>Edit</button>
+                            <button className="delete" onClick={() => handleDelete(item.id)}>Delete</button>
+                        </td>
+                    </tr>
+                ))
+               ) : (
+                <tr>
+                    <td colSpan="4">No data available</td>
+                </tr>
+               )}
+                
             </tbody>
         </table>
         <div className="pagination"></div>
